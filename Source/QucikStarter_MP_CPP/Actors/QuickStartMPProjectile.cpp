@@ -15,6 +15,12 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "UObject/ConstructorHelpers.h"
 
+#include "Components/PointLightComponent.h"
+
+
+#include "Net/UnrealNetwork.h"
+#include "Engine/Engine.h"
+
 #include "DrawDebugHelpers.h"
 
 
@@ -47,6 +53,11 @@ AQuickStartMPProjectile::AQuickStartMPProjectile()
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	StaticMesh->SetupAttachment(RootComponent);
 
+	ProjectileDazzler = CreateDefaultSubobject<UPointLightComponent>(TEXT("ProjectileDazzler"));
+	ProjectileDazzler->SetSourceLength(10.f);
+
+	ProjectileDazzler->SetupAttachment(RootComponent);
+
 	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	if (DefaultMesh.Succeeded())
 	{
@@ -66,7 +77,7 @@ AQuickStartMPProjectile::AQuickStartMPProjectile()
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> DefaultImpactEffect(TEXT("/Game/StarterContent/Particles/P_Sparks.P_Sparks"));
 	if (DefaultImpactEffect.Succeeded())
 	{
-		ImpactEffect = DefaultExplosionEffect.Object;
+		ImpactEffect = DefaultImpactEffect.Object;
 	}
 
 	//Definition for the Projectile Movement Component.
@@ -81,6 +92,8 @@ AQuickStartMPProjectile::AQuickStartMPProjectile()
 	DamageType = UDamageType::StaticClass();
 	
 	Damage = 10.0f;
+
+	bpawnImpacted = false;
 
 }
 
@@ -105,39 +118,31 @@ void AQuickStartMPProjectile::Tick(float DeltaTime)
 void AQuickStartMPProjectile::OnProjectileImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	if (OtherActor == GetOwner())
+	{
+		Destroy();
 		return;
-
+	}
+	
+	
+	
 	if (OtherActor)
 	{
 		//UGameplayStatics::ApplyPointDamage(OtherActor, Damage, NormalImpulse, Hit, GetInstigator()->Controller, this, DamageType);
 		
-		
-		
-		FVector spawnLocation = OtherActor->GetActorLocation();	
-		
-
-
-		AQucikStarter_MP_CPPCharacter*  Enemy  =   Cast<AQucikStarter_MP_CPPCharacter>(OtherActor);
-		
-		if (Enemy)
-			FinalEffect = ImpactEffect;
-		else
-			FinalEffect = ExplosionEffect;
-		
-
-		//FVector End		
-		// draw collision sphere
-		// create a collision sphere		
+		AQucikStarter_MP_CPPCharacter* enemy = Cast<AQucikStarter_MP_CPPCharacter>(OtherActor);
+		if (enemy) 
+		{
+			bpawnImpacted = true;
+			MulticastRPCHandleFX(enemy->GetActorLocation());
+			
+		}
 				
-
 		
 		float DamageRadius = 100.f;
-		TArray<AActor*> IgnoreElems;
-		
+		TArray<AActor*> IgnoreElems;	
 		
 
-		FVector Start = GetActorLocation();
-		
+		FVector Start = GetActorLocation();		
 		FVector End = GetActorLocation();
 		//FCollisionQueryParams CollisionParams;
 
@@ -164,7 +169,7 @@ void AQuickStartMPProjectile::OnProjectileImpact(UPrimitiveComponent* HitCompone
 	if (isHit) {
 
 		FCollisionShape MyColSphere = FCollisionShape::MakeSphere(DamageRadius);
-		DrawDebugSphere(GetWorld(), GetActorLocation(), MyColSphere.GetSphereRadius(), 50, FColor::Purple, false,5.f);
+		DrawDebugSphere(GetWorld(), GetActorLocation(), MyColSphere.GetSphereRadius(), 50, FColor::Purple, false,3.f);
 
 
 		//Colocar aquí daño radial
@@ -181,25 +186,69 @@ void AQuickStartMPProjectile::OnProjectileImpact(UPrimitiveComponent* HitCompone
 			true,
 			ECC_Pawn);
 
+
+
 	}
 		
 		
 	}
 
-	//Call in server
+	// Pon un timer para no solapar las 2 particles
+	//Call from server Clients
 	Destroy(); 
 }
 
 
 
+void AQuickStartMPProjectile::MulticastRPCHandleFX_Implementation(FVector Location)
+{
+	//if (GetRemoteRole() < ROLE_Authority) //Redundante pues solo se ejecuta en clientes
+	//{
+	//}
+		UGameplayStatics::SpawnEmitterAtLocation(this,
+			ImpactEffect,
+			Location, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
+
+		FString ImpactMessage = FString::Printf(TEXT("You have a hit!!."));
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, ImpactMessage);
+
+	
+	
+
+}
+
 /**Call in clients*/
 void AQuickStartMPProjectile::Destroyed()
 {
-	
+
 	FVector spawnLocation = GetActorLocation();
 	
-	UGameplayStatics::SpawnEmitterAtLocation(this, 
-		ExplosionEffect,
-		spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
+		
+		if (!bpawnImpacted)
+		{
+			
+
+			UGameplayStatics::SpawnEmitterAtLocation(this,
+				ExplosionEffect,
+				spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
+
+			FString ImpactMessage = FString::Printf(TEXT("You don´t have a hit!!."));
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, ImpactMessage);
+		}
+		
+	
+		bpawnImpacted = false;
 }
+
+
+//
+//void AQuickStartMPProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const
+//{
+//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+//
+//	//Replicate current health and currentWeapon.
+//	//DOREPLIFETIME(AQuickStartMPProjectile, bpawnImpacted);
+//	
+//
+//}
 

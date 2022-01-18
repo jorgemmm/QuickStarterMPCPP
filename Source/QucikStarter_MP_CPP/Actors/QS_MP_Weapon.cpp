@@ -16,6 +16,10 @@ AQS_MP_Weapon::AQS_MP_Weapon()
 
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>( TEXT("Weapon Mesh"));
 	RootComponent = WeaponMesh;
+
+	//SetReplicates(true);
+	//SetReplicatedMovement(true);
+	
 }
 
 // Called when the game starts or when spawned
@@ -30,5 +34,17 @@ void AQS_MP_Weapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void AQS_MP_Weapon::Fire()
+{
+	AActor* MyOwnwer = GetOwner();
+	if (MyOwnwer)
+	{
+		FVector EyeLocation;
+		FRotator EyeRotator;
+		MyOwnwer->GetActorEyesViewPoint(EyeLocation, EyeRotator);
+
+	}
 }
 

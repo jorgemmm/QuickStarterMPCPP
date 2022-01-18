@@ -11,6 +11,7 @@ class UStaticMeshComponent;
 class UProjectileMovementComponent;
 class UParticleSystem;
 class UDamageType;
+class UPointLightComponent;
 
 
 UCLASS()
@@ -45,12 +46,17 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		UProjectileMovementComponent* ProjectileMovementComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UPointLightComponent* ProjectileDazzler;
+
 	// Particle used when the projectile impacts against another object and explodes.
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		UParticleSystem* ExplosionEffect;
 	// Particle used when the projectile impacts against another object and explodes.
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		UParticleSystem* ImpactEffect;
+
+	
 
 	UParticleSystem* FinalEffect;
 
@@ -66,5 +72,12 @@ public:
 	UFUNCTION(Category = "Projectile")
 	void OnProjectileImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
+	/** Client function To Spawn FX*/
+	UFUNCTION(NetMulticast, Reliable)
+		void MulticastRPCHandleFX(FVector Location);
+	
+	//UPROPERTY(Replicated)
+	bool bpawnImpacted;
+	
 	virtual void Destroyed() override;
 };

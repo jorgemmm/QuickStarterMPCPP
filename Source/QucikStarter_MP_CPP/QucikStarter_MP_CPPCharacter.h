@@ -36,6 +36,9 @@ public:
 
 protected:
 
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
 	/** Resets HMD orientation in VR. */
 	void OnResetVR();
 
@@ -67,6 +70,8 @@ protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
+
+
 
 public:
 	/** Returns CameraBoom subobject **/
@@ -112,16 +117,21 @@ public:
 
 
 
-	UPROPERTY(EditDefaultsOnly, Category = "Gameplay|Projectile")
-		TSubclassOf<AQuickStartMPProjectile> ProjectileClass;
+
 
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay|Weapon")
 		TSubclassOf<AQS_MP_Weapon> WeaponClass;
+	
+	UPROPERTY(Replicated)
+	AQS_MP_Weapon* CurrentWeaponRef;
 
 	/** Delay between shots in seconds. Used to control fire rate for our test projectile, but also to prevent an overflow of server functions from binding SpawnProjectile directly to input.*/
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay")
 		float FireRate;
-
+	
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Gameplay|Projectile")
+		TSubclassOf<AQuickStartMPProjectile> ProjectileClass;
 	/** If true, we are in the process of firing projectiles. */
 	bool bIsFiringWeapon;
 

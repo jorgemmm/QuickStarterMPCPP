@@ -54,7 +54,7 @@ AQucikStarter_MP_CPPCharacter::AQucikStarter_MP_CPPCharacter()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 
-
+	
 
 	//Initialize the player's Health
 	MaxHealth = 100.0f;
@@ -65,6 +65,9 @@ AQucikStarter_MP_CPPCharacter::AQucikStarter_MP_CPPCharacter()
 	//Initialize fire rate
 	FireRate = 0.25f;
 	bIsFiringWeapon = false;
+
+	WeaponClass = AQS_MP_Weapon::StaticClass();
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -99,6 +102,36 @@ void AQucikStarter_MP_CPPCharacter::SetupPlayerInputComponent(class UInputCompon
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AQucikStarter_MP_CPPCharacter::OnResetVR);
 }
 
+
+void AQucikStarter_MP_CPPCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+		
+		if (GetLocalRole() == ROLE_Authority)
+		{
+	
+			FActorSpawnParameters spawnParameters;
+			spawnParameters.Instigator = GetInstigator();
+			spawnParameters.Owner = this;
+
+			if (WeaponClass) {
+				CurrentWeaponRef = GetWorld()->SpawnActor<AQS_MP_Weapon>(WeaponClass, GetActorLocation(), GetActorRotation(), spawnParameters);
+				
+			}
+			//AQS_MP_Weapon* CurrentWeaponRef = GetWorld()->SpawnActor<AQS_MP_Weapon>(GetActorLocation(), GetActorRotation(), spawnParameters);
+
+
+			CurrentWeaponRef->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, TEXT("WeaponSocket"));
+
+			FString healthMessage = FString::Printf(TEXT("%s now has %s component attched."), *GetFName().ToString(), *CurrentWeaponRef->GetName());
+			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Blue, healthMessage);
+
+		
+
+
+		}
+
+}
 
 void AQucikStarter_MP_CPPCharacter::OnResetVR()
 {
@@ -221,8 +254,13 @@ void AQucikStarter_MP_CPPCharacter::OnHealthUpdate()
 
 void AQucikStarter_MP_CPPCharacter::StartFire()
 {
+	//if(WeaponClass)
+
+
 	if (!bIsFiringWeapon)
 	{
+
+
 		bIsFiringWeapon = true;
 		UWorld* World = GetWorld();
 		World->GetTimerManager().SetTimer(FiringTimer, this, &AQucikStarter_MP_CPPCharacter::StopFire, FireRate, false);
@@ -251,6 +289,8 @@ void AQucikStarter_MP_CPPCharacter::GetLifetimeReplicatedProps(TArray <FLifetime
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	//Replicate current health.
+	//Replicate current health and currentWeapon.
 	DOREPLIFETIME(AQucikStarter_MP_CPPCharacter, CurrentHealth);
+	DOREPLIFETIME(AQucikStarter_MP_CPPCharacter, CurrentWeaponRef);
+
 }
