@@ -11,6 +11,7 @@ class UStaticMeshComponent;
 class UProjectileMovementComponent;
 class UParticleSystem;
 class UDamageType;
+class UQSDamageType;
 class UPointLightComponent;
 
 
@@ -62,8 +63,12 @@ public:
 
 
 	//The damage type and damage that will be done by this projectile
+	/*UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
+		TSubclassOf<UDamageType> DamageType;*/
+
+	//The damage type and damage that will be done by this projectile
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
-		TSubclassOf<UDamageType> DamageType;
+		TSubclassOf<UQSDamageType> DamageType;
 
 	//The damage dealt by this projectile.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
@@ -76,8 +81,10 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 		void MulticastRPCHandleFX(FVector Location);
 	
-	//UPROPERTY(Replicated)
+	UPROPERTY(Replicated)
 	bool bpawnImpacted;
 	
 	virtual void Destroyed() override;
+
+	void GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const;
 };

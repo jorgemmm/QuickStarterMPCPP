@@ -9,11 +9,6 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 
-#include "Net/UnrealNetwork.h"
-#include "Engine/Engine.h"
-
-#include "Actors/QuickStartMPProjectile.h"
-#include "Actors/QS_MP_Weapon.h"
 
 //#include "QuickStartMPProjectile.h"
 
@@ -55,19 +50,10 @@ AQucikStarter_MP_CPPCharacter::AQucikStarter_MP_CPPCharacter()
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 
 	
-
-	//Initialize the player's Health
-	MaxHealth = 100.0f;
-	CurrentHealth = MaxHealth;
-
+	
+		
 	//Initialize projectile class
-	ProjectileClass = AQuickStartMPProjectile::StaticClass();
-	//Initialize fire rate
-	FireRate = 0.25f;
-	bIsFiringWeapon = false;
-
-	WeaponClass = AQS_MP_Weapon::StaticClass();
-
+	//ProjectileClass = AQuickStartMPProjectile::StaticClass();	
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -91,8 +77,9 @@ void AQucikStarter_MP_CPPCharacter::SetupPlayerInputComponent(class UInputCompon
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AQucikStarter_MP_CPPCharacter::LookUpAtRate);
 
-	// Handle firing projectiles
+	// Handle firing projectiles Coded in BaseOnline
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AQucikStarter_MP_CPPCharacter::StartFire);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AQucikStarter_MP_CPPCharacter::StartFire);
 
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &AQucikStarter_MP_CPPCharacter::TouchStarted);
@@ -107,29 +94,29 @@ void AQucikStarter_MP_CPPCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 		
-		if (GetLocalRole() == ROLE_Authority)
+		/*if (GetLocalRole() == ROLE_Authority)
 		{
 	
-			FActorSpawnParameters spawnParameters;
-			spawnParameters.Instigator = GetInstigator();
-			spawnParameters.Owner = this;
+			//FActorSpawnParameters spawnParameters;
+			//spawnParameters.Instigator = GetInstigator();
+			//spawnParameters.Owner = this;
 
-			if (WeaponClass) {
-				CurrentWeaponRef = GetWorld()->SpawnActor<AQS_MP_Weapon>(WeaponClass, GetActorLocation(), GetActorRotation(), spawnParameters);
-				
-			}
-			//AQS_MP_Weapon* CurrentWeaponRef = GetWorld()->SpawnActor<AQS_MP_Weapon>(GetActorLocation(), GetActorRotation(), spawnParameters);
+			//if (WeaponClass) {
+			//	CurrentWeaponRef = GetWorld()->SpawnActor<AQS_MP_Weapon>(WeaponClass, GetActorLocation(), GetActorRotation(), spawnParameters);
+			//	
+			//}
+			////AQS_MP_Weapon* CurrentWeaponRef = GetWorld()->SpawnActor<AQS_MP_Weapon>(GetActorLocation(), GetActorRotation(), spawnParameters);
 
 
-			CurrentWeaponRef->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, TEXT("WeaponSocket"));
+			//CurrentWeaponRef->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, TEXT("WeaponSocket"));
 
-			FString healthMessage = FString::Printf(TEXT("%s now has %s component attched."), *GetFName().ToString(), *CurrentWeaponRef->GetName());
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Blue, healthMessage);
+			//FString healthMessage = FString::Printf(TEXT("%s now has %s component attched."), *GetFName().ToString(), *CurrentWeaponRef->GetName());
+			//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Blue, healthMessage);
 
 		
 
 
-		}
+		}*/
 
 }
 
@@ -195,83 +182,20 @@ void AQucikStarter_MP_CPPCharacter::MoveRight(float Value)
 	}
 }
 
-
-void AQucikStarter_MP_CPPCharacter::SetCurrentHealth(float healthValue)
-{
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		CurrentHealth = FMath::Clamp(healthValue, 0.f, MaxHealth);
-		OnHealthUpdate();
-	}
-}
-
-float AQucikStarter_MP_CPPCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
-{
-	float damageApplied = CurrentHealth - DamageTaken;
-	SetCurrentHealth(damageApplied);
-	return damageApplied;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-// Replicated Properties
-
-void AQucikStarter_MP_CPPCharacter::OnRep_CurrentHealth()
-{
-	OnHealthUpdate();
-}
-
-void AQucikStarter_MP_CPPCharacter::OnHealthUpdate()
-{
-	//Client-specific functionality
-	if (IsLocallyControlled())
-	{
-		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
-
-		if (CurrentHealth <= 0)
-		{
-			FString deathMessage = FString::Printf(TEXT("You have been killed."));
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
-		}
-	}
-
-	//Server-specific functionality
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
-	}
-
-	//Functions that occur on all machines. 
-	/*
-		Any special functionality that should occur as a result of damage or death should be placed here.
-	*/
-}
-
-
-
-
 void AQucikStarter_MP_CPPCharacter::StartFire()
 {
-	//if(WeaponClass)
-
-
-	if (!bIsFiringWeapon)
-	{
-
-
-		bIsFiringWeapon = true;
-		UWorld* World = GetWorld();
-		World->GetTimerManager().SetTimer(FiringTimer, this, &AQucikStarter_MP_CPPCharacter::StopFire, FireRate, false);
-		HandleFire();
-	}
+	Super::StartFire();
 }
 
 void AQucikStarter_MP_CPPCharacter::StopFire()
 {
-	bIsFiringWeapon = false;
+	Super::StopFire();
 }
+
+
+
+//Old fire implementation
+/**
 
 void AQucikStarter_MP_CPPCharacter::HandleFire_Implementation()
 {
@@ -285,12 +209,4 @@ void AQucikStarter_MP_CPPCharacter::HandleFire_Implementation()
 	AQuickStartMPProjectile* spawnedProjectile = GetWorld()->SpawnActor<AQuickStartMPProjectile>(spawnLocation, spawnRotation, spawnParameters);
 }
 
-void AQucikStarter_MP_CPPCharacter::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	//Replicate current health and currentWeapon.
-	DOREPLIFETIME(AQucikStarter_MP_CPPCharacter, CurrentHealth);
-	DOREPLIFETIME(AQucikStarter_MP_CPPCharacter, CurrentWeaponRef);
-
-}
+*/

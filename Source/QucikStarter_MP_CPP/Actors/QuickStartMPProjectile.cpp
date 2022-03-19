@@ -5,11 +5,13 @@
 #include "QuickStartMPProjectile.h"
 
 #include "QucikStarter_MP_CPP/QucikStarter_MP_CPPCharacter.h"
+#include "QucikStarter_MP_CPP/Actors/QSDamageType.h"
 
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "GameFramework/DamageType.h"
+
 #include "Particles/ParticleSystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -74,6 +76,8 @@ AQuickStartMPProjectile::AQuickStartMPProjectile()
 		ExplosionEffect = DefaultExplosionEffect.Object;
 	}
 
+	
+
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> DefaultImpactEffect(TEXT("/Game/StarterContent/Particles/P_Sparks.P_Sparks"));
 	if (DefaultImpactEffect.Succeeded())
 	{
@@ -128,14 +132,19 @@ void AQuickStartMPProjectile::OnProjectileImpact(UPrimitiveComponent* HitCompone
 	if (OtherActor)
 	{
 		//UGameplayStatics::ApplyPointDamage(OtherActor, Damage, NormalImpulse, Hit, GetInstigator()->Controller, this, DamageType);
-		
-		AQucikStarter_MP_CPPCharacter* enemy = Cast<AQucikStarter_MP_CPPCharacter>(OtherActor);
-		if (enemy) 
+		if(GetLocalRole()==ROLE_Authority)
 		{
-			bpawnImpacted = true;
-			MulticastRPCHandleFX(enemy->GetActorLocation());
-			
+			AQucikStarter_MP_CPPCharacter* enemy = Cast<AQucikStarter_MP_CPPCharacter>(OtherActor);
+			if (enemy)
+			{
+				//Esto se puede ahorrar
+				//Pues se puede poner como RepNotify en Health
+				bpawnImpacted = true;
+				//MulticastRPCHandleFX(enemy->GetActorLocation());
+
+			}
 		}
+		
 				
 		
 		float DamageRadius = 100.f;
@@ -157,19 +166,19 @@ void AQuickStartMPProjectile::OnProjectileImpact(UPrimitiveComponent* HitCompone
 			ETraceTypeQuery::TraceTypeQuery1,
 			false,
 			IgnoreElems,
-			EDrawDebugTrace::ForDuration,
+			EDrawDebugTrace::None,
 			outHit,
 			true,
 			FLinearColor::Green, //Trace
 			FLinearColor::Red,   //Hit
-			5.0     //DrawTime
+			.2f     //DrawTime
 
 		);
 
 	if (isHit) {
 
 		FCollisionShape MyColSphere = FCollisionShape::MakeSphere(DamageRadius);
-		DrawDebugSphere(GetWorld(), GetActorLocation(), MyColSphere.GetSphereRadius(), 50, FColor::Purple, false,3.f);
+		//DrawDebugSphere(GetWorld(), GetActorLocation(), MyColSphere.GetSphereRadius(), 50, FColor::Purple, false,.2f);
 
 
 		//Colocar aquí daño radial
@@ -179,7 +188,7 @@ void AQuickStartMPProjectile::OnProjectileImpact(UPrimitiveComponent* HitCompone
 			Damage,
 		    outHit.Location,
 			DamageRadius,
-			DamageType,
+			UQSDamageType::StaticClass(),
 			IgnoreElems,
 			this,
 			GetInstigator()->Controller,
@@ -217,38 +226,45 @@ void AQuickStartMPProjectile::MulticastRPCHandleFX_Implementation(FVector Locati
 
 }
 
-/**Call in clients*/
+/**Call in clients
+Esta función se replica a todos los clientes conectados Se replica 
+*/
 void AQuickStartMPProjectile::Destroyed()
 {
 
 	FVector spawnLocation = GetActorLocation();
-	
+	//FVector spawnScale  =
 		
 		if (!bpawnImpacted)
 		{
 			
 
-			UGameplayStatics::SpawnEmitterAtLocation(this,
+			/*UGameplayStatics::SpawnEmitterAtLocation(this,
 				ExplosionEffect,
-				spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
+				spawnLocation,
+				FRotator::ZeroRotator,
+				FVector(0.2,0.2,0.2),
+				
+				true, EPSCPoolMethod::AutoRelease);*/
 
-			FString ImpactMessage = FString::Printf(TEXT("You don´t have a hit!!."));
+			FString ImpactMessage = FString::Printf(TEXT("You hit to enemy!!!"));
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, ImpactMessage);
 		}
 		
-	
+		FString ImpactMessage = FString::Printf(TEXT("You don´t have a hit!!."));
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, ImpactMessage);
 		bpawnImpacted = false;
 }
 
 
-//
-//void AQuickStartMPProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const
-//{
-//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-//
-//	//Replicate current health and currentWeapon.
-//	//DOREPLIFETIME(AQuickStartMPProjectile, bpawnImpacted);
-//	
-//
-//}
+
+void AQuickStartMPProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	//Replicate current health and currentWeapon.
+	DOREPLIFETIME(AQuickStartMPProjectile, bpawnImpacted);
+	
+
+}
 

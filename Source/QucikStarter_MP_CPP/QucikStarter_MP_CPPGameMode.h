@@ -6,6 +6,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "QucikStarter_MP_CPPGameMode.generated.h"
 
+class APlayerController;
+
 UCLASS(minimalapi)
 class AQucikStarter_MP_CPPGameMode : public AGameModeBase
 {
@@ -13,6 +15,24 @@ class AQucikStarter_MP_CPPGameMode : public AGameModeBase
 
 public:
 	AQucikStarter_MP_CPPGameMode();
+
+
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+
+
+	void GetPlayerStart();
+
+
+public:
+
+	TArray<AActor*> PlayerStarts;
+
+	UFUNCTION(Server, Reliable)
+		void HandleRespawnPlayer(APlayerController* PController);
+
 };
 
 
